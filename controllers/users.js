@@ -1,3 +1,4 @@
+import { decodeToken } from "../middleware/auth.js";
 import User from "../models/User.js";
 
 /* READ */

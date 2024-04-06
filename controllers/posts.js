@@ -1,3 +1,5 @@
+import mongoose from "mongoose";
+import { decodeToken } from "../middleware/auth.js";
 import Post from "../models/Post.js";
 import User from "../models/User.js";
 
@@ -30,7 +32,9 @@ export const createPost = async (req, res) => {
 /* READ */
 export const getFeedPosts = async (req, res) => {
   try {
-    const posts = await Post.find().sort({ $natural: -1 });
+    const posts = await Post.find().sort({ $natural: -1 })
+      .populate("comments.userId", "firstName lastName picturePath")
+      .populate("comments.commentReply.userId", "firstName lastName picturePath");
     res.status(200).json(posts);
   } catch (error) {
     res.status(404).json({ message: error.message });
@@ -40,7 +44,9 @@ export const getFeedPosts = async (req, res) => {
 export const getUserPosts = async (req, res) => {
   try {
     const { userId } = req.params;
-    const posts = await Post.find({ userId }).sort({ $natural: -1 });
+    const posts = await Post.find({ userId }).sort({ $natural: -1 })
+      .populate("comments.userId", "firstName lastName picturePath")
+      .populate("comments.commentReply.userId", "firstName lastName picturePath");
     res.status(200).json(posts);
   } catch (error) {
     res.status(404).json({ message: error.message });
@@ -73,3 +79,89 @@ export const likePost = async (req, res) => {
     res.status(404).json({ message: error.message });
   }
 };
+
+/* COMMENT */
+export const sendComment = async (req, res) => {
+  try {
+    const authorizationHeader = req.headers.authorization;
+    const token = authorizationHeader && authorizationHeader.split(" ")[1]
+
+    if (!token) {
+      throw new Error("Token not found");
+    }
+
+    const userDetail = await decodeToken(token);
+    const userId = userDetail.id;
+
+    const { postId, commentId, comment, commentReply } = req.body;
+
+    const post = await Post.findById(postId);
+
+    if (post) {
+      if (!commentId || !commentReply) {
+        const updatedComment = await Post.findByIdAndUpdate(postId, {
+          comments: [
+            ...post.comments,
+            {
+              comment: comment,
+              commentReply: [],
+              userId: userId,
+            },
+          ],
+        })
+
+        if (!updatedComment) {
+          throw new Error("Could not update comment");
+        }
+        res.status(200).json(updatedComment);
+      } else {
+        const updatedComments = post.comments.map(comment => {
+          if (comment._id.toString() === commentId.toString()) {
+            return {
+              ...comment,
+              commentReply: [
+                ...comment.commentReply,
+                {
+                  comment: commentReply,
+                  userId: userId
+                }
+              ]
+            };
+          }
+          return comment;
+        });
+
+        const updatedComment = await Post.findByIdAndUpdate(postId, { comments: updatedComments }, { new: true });
+
+
+        if (!updatedComment) {
+          throw new Error("Could not update comment");
+        }
+        res.status(200).json(updatedComment);
+      }
+    }
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+}
+
+/* GET COMMENT */
+export const getComments = async (req, res) => {
+  try {
+    const { postId } = req.body;
+    if (!postId) {
+      throw new Error("Post Id not found");
+    }
+    const comment = await Post.findById(postId).populate("comments.userId", "firstName lastName picturePath")
+      .populate("comments.commentReply.userId", "firstName lastName picturePath").sort({ "comments.createdAt": -1 });
+
+    if (!comment) {
+      throw new Error("post not found");
+    }
+    const newObject = comment && comment.comments;
+    res.status(200).json(newObject);
+
+  } catch (error) {
+    res.status(404).json({ message: error.message });
+  }
+}

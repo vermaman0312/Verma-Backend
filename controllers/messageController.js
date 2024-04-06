@@ -1,33 +1,81 @@
+import { decodeToken } from "../middleware/auth.js";
 import Conversation from "../models/Conversation.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
 
 export const getConversations = async (req, res) => {
   try {
-    const { userId } = req.body;
+    const authorizationHeader = req.headers.authorization;
+    const token = authorizationHeader && authorizationHeader.split(" ")[1]
+
+    if (!token) {
+      throw new Error("Token not found");
+    }
+
+    const userDetail = await decodeToken(token);
+    const userId = userDetail.id;
 
     const conversations = await Conversation.find({
       recipients: {
         $in: [userId],
       },
     })
-      .populate("recipients", "-password")
+      .populate("recipients", "firstName lastName picturePath friends")
       .sort("-updatedAt")
       .lean();
 
-    for (let i = 0; i < conversations.length; i++) {
-      const conversation = conversations[i];
-      for (let j = 0; j < 2; j++) {
-        if (conversation.recipients[j]._id != userId) {
-          conversation.recipient = conversation.recipients[j];
-        }
-      }
-    }
+    const newObject = conversations && conversations.map((conversation) => ({
+      conversationId: conversation._id,
+      userDetails: (() => {
+        const filteredRecipients = conversation.recipients && conversation.recipients
+          .filter((filterData) => filterData._id.toString() === userId.toString());
 
-    return res.json(conversations);
-  } catch (err) {
-    console.log(err);
-    return res.status(400).json({ error: err.message });
+        if (filteredRecipients.length === 1) {
+          const { _id, firstName, lastName, picturePath } = filteredRecipients[0];
+          return {
+            userId: _id,
+            firstName,
+            lastName,
+            picturePath,
+          };
+        } else {
+          return filteredRecipients.map(filteredRecipient => ({
+            userId: filteredRecipient._id,
+            firstName: filteredRecipient.firstName,
+            lastName: filteredRecipient.lastName,
+            picturePath: filteredRecipient.picturePath,
+          }));
+        }
+      })(),
+      recipientDetails: (() => {
+        const filteredRecipients = conversation.recipients && conversation.recipients
+          .filter((filterData) => filterData._id.toString() !== userId.toString());
+
+        if (filteredRecipients.length === 1) {
+          const { _id, firstName, lastName, picturePath } = filteredRecipients[0];
+          return {
+            userId: _id,
+            firstName,
+            lastName,
+            picturePath,
+          };
+        } else {
+          return filteredRecipients.map(filteredRecipient => ({
+            userId: filteredRecipient._id,
+            firstName: filteredRecipient.firstName,
+            lastName: filteredRecipient.lastName,
+            picturePath: filteredRecipient.picturePath,
+          }));
+        }
+      })(),
+      lastMessageAt: conversation.lastMessageAt,
+    }));
+
+    return res.json(newObject);
+
+
+  } catch (error) {
+    return res.status(400).json({ message: error });
   }
 }
 
@@ -44,7 +92,7 @@ export const getMessages = async (req, res) => {
     const messages = await Message.find({
       conversation: conversation._id,
     })
-      .populate("sender", "-password")
+      .populate("sender", "firstName lastName picturePath")
       .sort("-createdAt")
       .limit(12);
 
