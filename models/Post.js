@@ -22,10 +22,56 @@ const postSchema = new mongoose.Schema(
       type: Map,
       of: Boolean,
     },
-    comments: {
-      type: Array,
-      default: [],
-    },
+    comments: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.String,
+          required: false,
+          default: null,
+          ref: 'User'
+        },
+        comment: {
+          type: String,
+          required: false,
+          default: null,
+        },
+        likes: {
+          type: Array,
+          required: false,
+          default: null,
+        },
+        commentReply: [
+          {
+            userId: {
+              type: mongoose.Schema.Types.String,
+              required: false,
+              default: null,
+              ref: 'User'
+            },
+            comment: {
+              type: String,
+              required: false,
+              default: null,
+            },
+            likes: {
+              type: Array,
+              required: false,
+              default: null,
+            },
+            timestamps: {
+              type: Date,
+              required: false,
+              default: new Date(),
+            }
+          }
+        ],
+        timestamps: {
+          type: Date,
+          required: false,
+          default: new Date(),
+        }
+      }
+    ],
   },
   { timestamps: true }
 );

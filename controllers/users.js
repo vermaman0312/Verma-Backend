@@ -62,3 +62,27 @@ export const addRemoveFriend = async (req, res) => {
     res.status(404).json({ message: err.message });
   }
 };
+
+/* GET USER WITHOUT FRIENDS */
+export const getUserWithoutFriends = async (req, res) => {
+  try {
+    const authorizationHeader = req.headers.authorization;
+    const token = authorizationHeader && authorizationHeader.split(" ")[1];
+    if (!token) {
+      return res.json({ Message: "Token not found" });
+    }
+    const userDetail = await decodeToken(token);
+    const userId = userDetail.id;
+    const users = await User.find({});
+    if (!users || users.length === 0) {
+      return res.json({ Message: "User list not found" });
+    }
+    const usersWithoutFriends = users.filter((user) => user._id.toString() !== userId.toString());
+    if (!usersWithoutFriends.legth === 0) {
+      return res.json({ Message: "User list not found" });
+    }
+    return res.json(usersWithoutFriends);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

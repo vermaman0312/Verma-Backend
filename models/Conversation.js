@@ -8,6 +8,11 @@ const ConversationSchema = new mongoose.Schema(
         ref: "User",
       },
     ],
+    lastMessage: {
+      type: String,
+      required: false,
+      default: null
+    },
     lastMessageAt: {
       type: Date,
     },
