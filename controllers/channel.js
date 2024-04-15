@@ -14,10 +14,12 @@ export const createChannel = async (req, res) => {
             return res.json({ Message: "Invalid Token" });
         }
         const userId = userDetail.id;
-        const { channelName, channelDescription, channelImage, privateChannel } = req.body;
-        console.log("req.body", req.body)
+        const { channelName, channelDescription, channelImage, privateChannel } =
+            req.body;
         if (!channelName || !channelDescription) {
-            return res.json({ Message: "Channel name and channel description invalid" });
+            return res.json({
+                Message: "Channel name and channel description invalid",
+            });
         }
         const channel = new Channel({
             channelName: channelName,
@@ -34,11 +36,11 @@ export const createChannel = async (req, res) => {
         if (!savedChannel) {
             return res.json({ Message: "Failed to create channel" });
         }
-        return res.json(channel)
+        return res.json(channel);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-}
+};
 
 // Get Channel //
 export const getAllChannel = async (req, res) => {
@@ -53,7 +55,7 @@ export const getAllChannel = async (req, res) => {
             return res.json({ Message: "Invalid Token" });
         }
         const userId = userDetail.id;
-        const channel = await Channel.find({});
+        const channel = await Channel.find({ privateChannel: false });
         if (!channel || channel.length === 0) {
             return res.json([]);
         }
@@ -72,7 +74,7 @@ export const getAllChannel = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-}
+};
 
 // Get My Chanell list //
 export const getAllMyChannel = async (req, res) => {
@@ -106,7 +108,7 @@ export const getAllMyChannel = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-}
+};
 
 // Get Channel By Id //
 export const getChannelById = async (req, res) => {
@@ -121,8 +123,10 @@ export const getChannelById = async (req, res) => {
             return res.json({ Message: "Invalid Token" });
         }
         const { channelId } = req.body;
-        console.log("channelId", channelId)
-        const channel = await Channel.findById(channelId);
+        const channel = await Channel.findById(channelId)
+            .populate("channelMembers", "firstName lastName picturePath")
+            .populate("channelAdmin", "firstName lastName picturePath")
+            .populate("viewedChannel", "firstName lastName picturePath");
         if (!channel) {
             return res.json({ Message: "Channel not found" });
         }
@@ -142,7 +146,7 @@ export const getChannelById = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-}
+};
 
 // Delete Channel //
 export const deleteChannel = async (req, res) => {
@@ -167,7 +171,9 @@ export const deleteChannel = async (req, res) => {
         }
         const filteredChannel = channel.channelCreatedBy === userId ? true : false;
         if (!filteredChannel) {
-            return res.json({ Message: "You are not authorized to delete this channel" });
+            return res.json({
+                Message: "You are not authorized to delete this channel",
+            });
         }
         const deletedChannel = await Channel.findByIdAndDelete(channelId);
         if (!deletedChannel) {
@@ -177,7 +183,7 @@ export const deleteChannel = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-}
+};
 
 // Update Channel //
 export const updateChannel = async (req, res) => {
@@ -193,7 +199,8 @@ export const updateChannel = async (req, res) => {
         }
         const userId = userDetail.id;
         const { channelId } = req.params;
-        const { channelName, channelDescription, channelImage, privateChannel } = req.body;
+        const { channelName, channelDescription, channelImage, privateChannel } =
+            req.body;
         if (!channelId) {
             return res.json({ Message: "Channel Id not found" });
         }
@@ -203,11 +210,15 @@ export const updateChannel = async (req, res) => {
         }
         const filteredChannel = channel.channelCreatedBy === userId ? true : false;
         if (!filteredChannel) {
-            return res.json({ Message: "You are not authorized to update this channel" });
+            return res.json({
+                Message: "You are not authorized to update this channel",
+            });
         }
         const updatedChannel = await Channel.findByIdAndUpdate(channelId, {
             channelName: channelName ? channelName : channel.channelName,
-            channelDescription: channelDescription ? channelDescription : channel.channelDescription,
+            channelDescription: channelDescription
+                ? channelDescription
+                : channel.channelDescription,
             channelImage: channelImage ? channelImage : channel.channelImage,
             privateChannel: privateChannel ? privateChannel : channel.privateChannel,
         });
@@ -218,7 +229,7 @@ export const updateChannel = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-}
+};
 
 // Join Channel //
 export const joinChannel = async (req, res) => {
@@ -254,7 +265,7 @@ export const joinChannel = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-}
+};
 
 // Leave Channel //
 export const leaveChannel = async (req, res) => {
@@ -290,7 +301,7 @@ export const leaveChannel = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
-}
+};
 
 // Add Member //
 export const addMemberChannel = async (req, res) => {
@@ -306,6 +317,10 @@ export const addMemberChannel = async (req, res) => {
         }
         const userId = userDetail.id;
         const { channelId, receipantId } = req.body;
+
+        console.log("channelId", channelId);
+        console.log("receipantId", receipantId);
+
         if (!channelId || !receipantId) {
             return res.json({ Message: "Channel Id not found" });
         }
@@ -317,6 +332,10 @@ export const addMemberChannel = async (req, res) => {
         if (!filteredUser) {
             return res.json({ Message: "You are not authorize to add member" });
         }
+        const alreadyMember = channel.channelMembers.includes(receipantId);
+        if (alreadyMember) {
+            return res.json({ Message: "User is already a member" });
+        }
         channel.channelMembers.push(receipantId);
         const updatedChannel = await channel.save();
         if (!updatedChannel) {
@@ -326,7 +345,7 @@ export const addMemberChannel = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
-}
+};
 
 // Remove Member //
 export const removeMember = async (req, res) => {
@@ -353,7 +372,14 @@ export const removeMember = async (req, res) => {
         if (!filteredUser) {
             return res.json({ Message: "You are not authorize to remove member" });
         }
-        channel.channelMembers.splice(channel.channelMembers.indexOf(receipantId), 1);
+        const alreadyRemovedUser = channel.channelMembers.includes(receipantId);
+        if (!alreadyRemovedUser) {
+            return res.json({ Message: "User is not a member" });
+        }
+        channel.channelMembers.splice(
+            channel.channelMembers.indexOf(receipantId),
+            1
+        );
         const updatedChannel = await channel.save();
         if (!updatedChannel) {
             return res.json({ Message: "Failed to remove member" });
@@ -362,7 +388,7 @@ export const removeMember = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
-}
+};
 
 // Add Admin //
 export const addAdminChannel = async (req, res) => {
@@ -409,7 +435,7 @@ export const addAdminChannel = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
-}
+};
 
 // Remove Admin //
 export const removeAdminChannel = async (req, res) => {
@@ -436,6 +462,10 @@ export const removeAdminChannel = async (req, res) => {
         if (!filteredUser) {
             return res.json({ Message: "You are not authorize to remove admin" });
         }
+        const removedAdmin = channel.channelAdmin.includes(receipantId);
+        if (!removedAdmin) {
+            return res.json({ Message: "User is not an admin" });
+        }
         channel.channelAdmin.splice(channel.channelAdmin.indexOf(receipantId), 1);
         const updatedChannel = await channel.save();
         if (!updatedChannel) {
@@ -445,7 +475,7 @@ export const removeAdminChannel = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
-}
+};
 
 // Send Content in Channel //
 export const sendContentChannel = async (req, res) => {
@@ -473,7 +503,7 @@ export const sendContentChannel = async (req, res) => {
             contentPath: contentPath ? contentPath : undefined,
             content: content,
             likes: [],
-        }
+        };
         channel.channelContent.push(newObject);
         const updatedChannel = await channel.save();
         if (!updatedChannel) {
@@ -483,7 +513,7 @@ export const sendContentChannel = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
-}
+};
 
 // Like Content in Channel //
 export const likeRemoveLikeContent = async (req, res) => {
@@ -506,7 +536,9 @@ export const likeRemoveLikeContent = async (req, res) => {
         if (!channel) {
             return res.json({ Message: "Channel not found" });
         }
-        const content = channel.channelContent.find(content => content._id.toString() === contentId.toString());
+        const content = channel.channelContent.find(
+            (content) => content._id.toString() === contentId.toString()
+        );
         if (!content) {
             return res.json({ Message: "Content not found" });
         }
@@ -529,4 +561,4 @@ export const likeRemoveLikeContent = async (req, res) => {
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
-}
+};

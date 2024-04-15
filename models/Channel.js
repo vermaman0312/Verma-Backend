@@ -89,7 +89,8 @@ const ChannelSchema = new mongoose.Schema(
             default: new Date(),
         }
     },
-    { timestamps: true }
+    { strictPopulate: false },
+    { timestamps: true },
 );
 
 const Channel = mongoose.model("Channel", ChannelSchema);
