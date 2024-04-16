@@ -58,8 +58,10 @@ export const getAllChannel = async (req, res) => {
         const channel = await Channel.find({ privateChannel: false });
         if (!channel || channel.length === 0) {
             return res.json([]);
-        }
-        const newChannelObject = channel.map((response) => ({
+        };
+        const newChannelObject = channel.filter(response =>
+            response.channelMembers && !response.channelMembers.includes(userId)
+        ).map(response => ({
             channelId: response._id,
             channelName: response.channelName,
             channelDescription: response.channelDescription,
@@ -70,6 +72,96 @@ export const getAllChannel = async (req, res) => {
             viewedChannel: response.viewedChannel,
             channelCreatedDate: response.channelCreatedDate,
         }));
+
+        return res.json(newChannelObject);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// GET ALL FOLLOWED CHANNEL
+export const getFollowedChannel = async (req, res) => {
+    try {
+        const authorizationHeader = req.headers.authorization;
+        const token = authorizationHeader && authorizationHeader.split(" ")[1];
+        if (!token) {
+            return res.json({ Message: "Token not found" });
+        }
+        const userDetail = await decodeToken(token);
+        if (!userDetail) {
+            return res.json({ Message: "Invalid Token" });
+        }
+        const userId = userDetail.id;
+        const channel = await Channel.find({})
+        if (!channel || channel.length === 0) {
+            return res.json([]);
+        };
+        const newChannelObject = channel.filter(response =>
+            response.channelMembers && response.channelMembers.includes(userId) && response.channelCreatedBy !== userId
+        ).map(response => ({
+            channelId: response._id,
+            channelName: response.channelName,
+            channelDescription: response.channelDescription,
+            channelImage: response.channelImage,
+            channelCreatedBy: response.channelCreatedBy,
+            channelAdmin: response.channelAdmin,
+            channelMembers: response.channelMembers,
+            privateChannel: response.privateChannel,
+            viewedChannel: response.viewedChannel,
+            channelContent: {
+                lastMessage: response.channelContent.length > 0 ? response.channelContent.slice(-1)[0].content : "",
+                userId: response.channelContent.length > 0 ? response.channelContent.slice(-1)[0].senderId : "",
+                timeStamps: response.channelContent.length > 0 ? response.channelContent.slice(-1)[0].timestamps : "",
+                pendingMessagesLength: response.channelContent.filter(message => !message.isRead && message.senderId !== userId).length,
+            },
+            channelCreatedDate: response.channelCreatedDate,
+        }));
+
+        return res.json(newChannelObject);
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// GET CONTENT LIST //
+export const getConentListChannel = async (req, res) => {
+    try {
+        const authorizationHeader = req.headers.authorization;
+        const token = authorizationHeader && authorizationHeader.split(" ")[1];
+        if (!token) {
+            return res.json({ Message: "Token not found" });
+        }
+        const userDetail = await decodeToken(token);
+        if (!userDetail) {
+            return res.json({ Message: "Invalid Token" });
+        }
+        const userId = userDetail.id;
+        const channel = await Channel.find({})
+        if (!channel || channel.length === 0) {
+            return res.json([]);
+        };
+        const newChannelObject = channel.filter(response =>
+            response.channelMembers && response.channelMembers.includes(userId) || response.channelCreatedBy === userId
+        ).map(response => ({
+            channelId: response._id,
+            channelName: response.channelName,
+            channelDescription: response.channelDescription,
+            channelImage: response.channelImage,
+            channelCreatedBy: response.channelCreatedBy,
+            channelAdmin: response.channelAdmin,
+            channelMembers: response.channelMembers,
+            privateChannel: response.privateChannel,
+            isCommunicateEveryOne: response.isCommunicateEveryOne,
+            viewedChannel: response.viewedChannel,
+            channelContent: {
+                lastMessage: response.channelContent.length > 0 ? response.channelContent.slice(-1)[0].content : "",
+                userId: response.channelContent.length > 0 ? response.channelContent.slice(-1)[0].senderId : "",
+                timeStamps: response.channelContent.length > 0 ? response.channelContent.slice(-1)[0].timestamps : "",
+                pendingMessagesLength: response.channelContent.filter(message => !message.isRead && message.senderId !== userId).length,
+            },
+            channelCreatedDate: response.channelCreatedDate,
+        }));
+
         return res.json(newChannelObject);
     } catch (error) {
         res.status(500).json({ message: error.message });
@@ -201,6 +293,9 @@ export const updateChannel = async (req, res) => {
         const { channelId } = req.params;
         const { channelName, channelDescription, channelImage, privateChannel } =
             req.body;
+
+        console.log("req.body", privateChannel);
+        console.log("channelId", channelId);
         if (!channelId) {
             return res.json({ Message: "Channel Id not found" });
         }
@@ -208,20 +303,21 @@ export const updateChannel = async (req, res) => {
         if (!channel) {
             return res.json({ Message: "Channel not found" });
         }
-        const filteredChannel = channel.channelCreatedBy === userId ? true : false;
+        const filteredChannel = channel.channelAdmin.includes(userId);
         if (!filteredChannel) {
             return res.json({
                 Message: "You are not authorized to update this channel",
             });
         }
         const updatedChannel = await Channel.findByIdAndUpdate(channelId, {
-            channelName: channelName ? channelName : channel.channelName,
+            channelName: channelName ? channelName : undefined,
             channelDescription: channelDescription
                 ? channelDescription
-                : channel.channelDescription,
-            channelImage: channelImage ? channelImage : channel.channelImage,
-            privateChannel: privateChannel ? privateChannel : channel.privateChannel,
+                : undefined,
+            channelImage: channelImage ? channelImage : undefined,
+            privateChannel: privateChannel ? privateChannel : undefined,
         });
+        console.log("updatedChannel", updatedChannel)
         if (!updatedChannel) {
             return res.json({ Message: "Failed to update channel" });
         }
@@ -292,12 +388,23 @@ export const leaveChannel = async (req, res) => {
         if (!filteredUser) {
             return res.json({ Message: "User not found in channel" });
         }
-        channel.channelMembers.splice(channel.channelMembers.indexOf(userId), 1);
-        const updatedChannel = await channel.save();
-        if (!updatedChannel) {
-            return res.json({ Message: "Failed to leave channel" });
+        const filterAdmin = channel.channelAdmin.includes(userId);
+        if (filterAdmin) {
+            channel.channelAdmin.splice(channel.channelAdmin.indexOf(userId), 1);
+            channel.channelMembers.splice(channel.channelMembers.indexOf(userId), 1);
+            const updatedChannel = await channel.save();
+            if (!updatedChannel) {
+                return res.json({ Message: "Failed to leave channel" });
+            }
+            return res.json({ Message: "Channel left successfully" });
+        } else {
+            channel.channelMembers.splice(channel.channelMembers.indexOf(userId), 1);
+            const updatedChannel = await channel.save();
+            if (!updatedChannel) {
+                return res.json({ Message: "Failed to leave channel" });
+            }
+            return res.json({ Message: "Channel left successfully" });
         }
-        return res.json({ Message: "Channel left successfully" });
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }
@@ -416,6 +523,10 @@ export const addAdminChannel = async (req, res) => {
             return res.json({ Message: "You are not authorize to add admin" });
         }
         const existingUser = channel.channelMembers.includes(receipantId);
+        const existingAdmin = channel.channelAdmin.includes(receipantId);
+        if (existingAdmin) {
+            return res.json({ Message: "User is already admin" });
+        }
         if (!existingUser) {
             channel.channelMembers.push(receipantId);
             channel.channelAdmin.push(receipantId);
@@ -514,6 +625,23 @@ export const sendContentChannel = async (req, res) => {
         return res.status(500).json({ message: error.message });
     }
 };
+
+export const getContentChannel = async (req, res) => {
+    try {
+        const { channelId } = req.body;
+        if (!channelId) {
+            return res.json({ Message: "Channel Id not found" });
+        }
+        const channel = await Channel.findById(channelId);
+        if (!channel) {
+            return res.json({ Message: "Channel not found" });
+        }
+        const content = channel.channelContent;
+        return res.json({ Message: "Content fetched successfully", content });
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+}
 
 // Like Content in Channel //
 export const likeRemoveLikeContent = async (req, res) => {

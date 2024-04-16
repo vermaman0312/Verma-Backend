@@ -39,6 +39,11 @@ const ChannelSchema = new mongoose.Schema(
             default: null,
             ref: 'User'
         },
+        isCommunicateEveryOne: {
+            type: Boolean,
+            required: false,
+            default: false,
+        },
         privateChannel: {
             type: Boolean,
             required: false,
@@ -69,6 +74,14 @@ const ChannelSchema = new mongoose.Schema(
                     default: null,
                 },
                 likes: [
+                    {
+                        type: mongoose.Schema.Types.String,
+                        required: false,
+                        default: null,
+                        ref: 'User'
+                    }
+                ],
+                isRead: [
                     {
                         type: mongoose.Schema.Types.String,
                         required: false,
