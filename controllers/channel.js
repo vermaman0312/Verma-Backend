@@ -620,7 +620,13 @@ export const sendContentChannel = async (req, res) => {
         if (!updatedChannel) {
             return res.json({ Message: "Failed to send content" });
         }
-        return res.json({ Message: "Content sent successfully" });
+        const UpdatedContent = updatedChannel.channelContent;
+        if (UpdatedContent.length > 0) {
+            const latestContent = UpdatedContent[UpdatedContent.length - 1];
+            return res.json({ Message: "Content sent successfully", content: latestContent });
+        } else {
+            return res.json({ Message: "No content available" });
+        }
     } catch (error) {
         return res.status(500).json({ message: error.message });
     }

@@ -13,19 +13,13 @@ import { changeProfileImage, register } from "./controllers/auth.js";
 import { createPost } from "./controllers/posts.js";
 import authRoutes from "./routes/auth.js";
 import userRoutes from "./routes/users.js";
-import messageRoutes from "./routes/messages.js";
+import communicationRoutes from "./routes/communication.js";
 import postRoutes from "./routes/posts.js";
 import channelRoutes from "./routes/channel.js";
 import { verifyToken } from "./middleware/auth.js";
-import { authSocket, socketServer } from "./Utils/SocketServer.js";
-import { createServer } from "http";
 import { Server } from "socket.io";
-
-import User from "./models/User.js";
-import Post from "./models/Post.js";
-import { users, posts } from "./data/index.js";
-import { log } from "console";
 import { createChannel } from "./controllers/channel.js";
+import http from "http";
 
 // CONFIGURATIONS //
 // __dirname type module Alternative
@@ -34,15 +28,29 @@ const __dirname = path.dirname(__filename);
 dotenv.config();
 const app = express();
 
-const httpServer = createServer(app);
+const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: ["http://localhost:3000"],
+    origin: ["http://localhost:3000", "*"],
+    methods: ["GET", "POST"]
   },
 });
 
-io.use(authSocket);
-io.on("connection", (socket) => socketServer(socket));
+io.on("connection", (socket) => {
+  socket.on("joinRoom", (roomId) => {
+    socket.join(roomId);
+  });
+
+  socket.on("sendMessage", (data) => {
+    io.to(data.channelId).emit("receiveMessage", data);
+  });
+
+  socket.on("sendPersonalMessage", (data) => {
+    io.to(data.conversationId).emit("receivePersonalMessage", data);
+  })
+});
+
+
 
 // MIDDLEWARES //
 app.use(express.json());
@@ -76,12 +84,13 @@ app.post("/changeProfileImage", verifyToken, upload.single("picture"), changePro
 app.post("/channel", verifyToken, upload.single("picture"), createChannel);
 
 
+
 // ROUTES //
 app.use("/auth", authRoutes);
 app.use("/users", userRoutes);
 app.use("/posts", postRoutes);
-app.use("/messages", messageRoutes);
 app.use("/channel", channelRoutes);
+app.use("/communication", communicationRoutes);
 
 // MONGOOSE SETUP //
 const PORT = process.env.PORT || 6001;
