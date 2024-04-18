@@ -230,6 +230,7 @@ export const getChannelById = async (req, res) => {
             channelMembers: channel.channelMembers,
             channelAdmin: channel.channelAdmin,
             channelCreatedBy: channel.channelCreatedBy,
+            isCommunicateEveryOne: channel.isCommunicateEveryOne,
             privateChannel: channel.privateChannel,
             viewedChannel: channel.viewedChannel,
             channelCreatedDate: channel.channelCreatedDate,
@@ -291,7 +292,7 @@ export const updateChannel = async (req, res) => {
         }
         const userId = userDetail.id;
         const { channelId } = req.params;
-        const { channelName, channelDescription, channelImage, privateChannel } =
+        const { channelName, channelDescription, channelImage, privateChannel, isCommunicateEveryOne } =
             req.body;
 
         console.log("req.body", privateChannel);
@@ -316,6 +317,7 @@ export const updateChannel = async (req, res) => {
                 : undefined,
             channelImage: channelImage ? channelImage : undefined,
             privateChannel: privateChannel ? privateChannel : undefined,
+            isCommunicateEveryOne: isCommunicateEveryOne ? isCommunicateEveryOne : undefined,
         });
         console.log("updatedChannel", updatedChannel)
         if (!updatedChannel) {
