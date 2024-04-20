@@ -3,6 +3,7 @@ import { verifyToken } from "../middleware/auth.js";
 import {
   addAdminChannel,
   addMemberChannel,
+  createChannelLink,
   deleteChannel,
   getAllChannel,
   getAllMyChannel,
@@ -37,5 +38,6 @@ router.post("/removeAdminChannel", verifyToken, removeAdminChannel);
 router.post("/sendContentChannel", verifyToken, sendContentChannel);
 router.post("/getContentChannel", verifyToken, getContentChannel);
 router.post("/likeRemoveLikeContent", verifyToken, likeRemoveLikeContent);
+router.post("/createChannelLink", verifyToken, createChannelLink);
 
 export default router;

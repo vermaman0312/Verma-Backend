@@ -329,6 +329,33 @@ export const updateChannel = async (req, res) => {
     }
 };
 
+// Create channel link //
+export const createChannelLink = async (req, res) => {
+    try {
+        const authorizationHeader = req.headers.authorization;
+        const token = authorizationHeader && authorizationHeader.split(" ")[1];
+        if (!token) {
+            return res.json({ Message: "Token not found" });
+        }
+        const userDetail = await decodeToken(token);
+        if (!userDetail) {
+            return res.json({ Message: "Invalid Token" });
+        }
+        const userId = userDetail.id;
+        const { channelId } = req.body;
+        const randomUniqueId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        if (!channelId) {
+            return res.json({
+                Message: "Channel Id not found",
+            })
+        }
+        return res.json(`http://localhost:6001/channel/join?id=${channelId}/vald-unique-id=${randomUniqueId}/user=${token}`)
+
+    } catch (error) {
+        return res.status(500).json({ message: error.message });
+    }
+}
+
 // Join Channel //
 export const joinChannel = async (req, res) => {
     try {
