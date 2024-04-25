@@ -31,8 +31,13 @@ const app = express();
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: ["https://vermasocial.vercel.app/", "*", "https://verma-backend.onrender.com"],
-    methods: ["GET", "POST"]
+    origin: [
+      "https://vermasocial.vercel.app",
+      "https://verma-backend.onrender.com",
+      "http://localhost:3000",
+      "http://localhost:6001",
+    ],
+    methods: ["GET", "POST"],
   },
 });
 
@@ -47,10 +52,8 @@ io.on("connection", (socket) => {
 
   socket.on("sendPersonalMessage", (data) => {
     io.to(data.conversationId).emit("receivePersonalMessage", data);
-  })
+  });
 });
-
-
 
 // MIDDLEWARES //
 app.use(express.json());
@@ -80,10 +83,13 @@ const upload = multer({ storage });
 
 app.post("/auth/register", upload.single("picture"), register);
 app.post("/posts", verifyToken, upload.single("picture"), createPost);
-app.post("/changeProfileImage", verifyToken, upload.single("picture"), changeProfileImage);
+app.post(
+  "/changeProfileImage",
+  verifyToken,
+  upload.single("picture"),
+  changeProfileImage
+);
 app.post("/channel", verifyToken, upload.single("picture"), createChannel);
-
-
 
 // ROUTES //
 app.use("/auth", authRoutes);
