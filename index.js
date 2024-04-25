@@ -31,8 +31,7 @@ const app = express();
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    // origin: ["http://localhost:3000", "*", "http://localhost:6001"],
-    origin: ["*"],
+    origin: ["https://vermasocial.vercel.app", "*", "https://verma-backend.onrender.com"],
     methods: ["GET", "POST"]
   },
 });
