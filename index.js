@@ -9,16 +9,16 @@ import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
 
-import { changeProfileImage, register } from "./controllers/auth.js";
-import { createPost } from "./controllers/posts.js";
-import authRoutes from "./routes/auth.js";
-import userRoutes from "./routes/users.js";
-import communicationRoutes from "./routes/communication.js";
-import postRoutes from "./routes/posts.js";
-import channelRoutes from "./routes/channel.js";
-import { verifyToken } from "./middleware/auth.js";
+import { changeProfileImage, register } from "./src/controllers/auth.js";
+import { createPost } from "./src/controllers/posts.js";
+import authRoutes from "./src/routes/auth.js";
+import userRoutes from "./src/routes/users.js";
+import communicationRoutes from "./src/routes/communication.js";
+import postRoutes from "./src/routes/posts.js";
+import channelRoutes from "./src/routes/channel.js";
+import { verifyToken } from "./src/middleware/auth.js";
 import { Server } from "socket.io";
-import { createChannel } from "./controllers/channel.js";
+import { createChannel } from "./src/controllers/channel.js";
 import http from "http";
 
 // CONFIGURATIONS //
@@ -31,7 +31,8 @@ const app = express();
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: ["http://localhost:3000", "*", "http://localhost:6001"],
+    // origin: ["http://localhost:3000", "*", "http://localhost:6001"],
+    origin: ["*"],
     methods: ["GET", "POST"]
   },
 });
